@@ -2,7 +2,7 @@ import random
 import difflib
 import re
 
-BOT_NAME = "Mark"
+BOT_NAME = "Mark"  # NEW: single source of truth for bot name used in responses
 
 greetings = [
     "Hello there! I'm Mark — your friendly chatbot.",
@@ -37,9 +37,15 @@ responses = {
     "what is the longest mountain": "The Andes Mountains are the longest mountain range in the world."
 }
 
-EXIT_KEYWORDS = {"bye", "exit", "quit"}
+EXIT_KEYWORDS = {"bye", "exit", "quit"}  # NEW: set of exit keywords to gracefully end the chat
 
 def normalize(text: str) -> str:
+    """
+    NEW: normalize user input for matching.
+    - lowercase
+    - strip punctuation (keeps alphanumerics and spaces)
+    - collapse multiple spaces
+    """
     text = text.lower()
     # remove punctuation except keep spaces and alphanumerics
     text = re.sub(r"[^a-z0-9\s]", "", text)
@@ -49,28 +55,34 @@ def normalize(text: str) -> str:
 try:
     while True:
         user_input = input("You: ")
+        # NEW: ignore empty raw input (helps when user just hits Enter)
         if not user_input:
             continue
 
         norm = normalize(user_input)
 
+        # NEW: if normalization removed everything (e.g., only punctuation), skip
         if not norm:
             continue
 
+        # NEW: check for exit keywords after normalization
         if norm in EXIT_KEYWORDS:
             print(f"{BOT_NAME}: Goodbye! It was nice chatting with you.")
             break
 
+        # handle a special-case question
         if norm == "how are you":
             print(f"{BOT_NAME}: {random.choice(moods)}")
             continue
 
-        # direct match
+        # direct match against the canned responses
         response = responses.get(norm)
-        # try fuzzy match
+
+        # NEW: fuzzy matching - try to find a close key if no direct match
         if response is None:
             match = difflib.get_close_matches(norm, responses.keys(), n=1, cutoff=0.6)
             if match:
+                # NEW: if fuzzy match found, return the matched canned response
                 response = responses[match[0]]
 
         if response is None:
@@ -78,4 +90,5 @@ try:
 
         print(f"{BOT_NAME}: {response}")
 except KeyboardInterrupt:
+    # NEW: handle Ctrl+C gracefully instead of showing a stack trace
     print(f"\n{BOT_NAME}: Goodbye! (interrupted)")
